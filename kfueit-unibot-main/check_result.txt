@@ -1,0 +1,2 @@
+Has robot: True
+Has books: True

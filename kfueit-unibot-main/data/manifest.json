@@ -1,0 +1,12 @@
+{
+  "partner_id": "kfueit-edu-pk",
+  "partner_display_name": "KFUEIT Website",
+  "submission_cycle_label": "cycle-2026-05",
+  "schema_version": "1.0",
+  "generated_at": "2026-05-12T16:22:48.658892Z",
+  "counts": {
+    "sources": 191,
+    "records": 191,
+    "documents": 5
+  }
+}
