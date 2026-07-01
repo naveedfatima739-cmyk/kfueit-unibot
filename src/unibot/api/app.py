@@ -154,12 +154,8 @@ def create_app(
 
     app = FastAPI(title="UniBot API", lifespan=lifespan)
 
-    @app.get("/")
+    @app.get("/", response_class=HTMLResponse)
     async def root():
-        return {"status": "ok", "service": "UniBot API"}
-
-    @app.get("/chat", response_class=HTMLResponse)
-    async def chat_ui():
         return """<!DOCTYPE html>
 <html lang="en">
 <head>
