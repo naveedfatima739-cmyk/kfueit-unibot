@@ -161,42 +161,89 @@ def create_app(
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UniBot Chat</title>
+<title>KFUEIT UniBot</title>
+<link rel="icon" href="https://kfueit.edu.pk/uploads/1/favicon.png">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; height: 100vh; display: flex; justify-content: center; align-items: center; }
-  .chat-container { width: 700px; max-width: 95vw; height: 85vh; background: white; border-radius: 16px; box-shadow: 0 2px 20px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
-  .header { background: #1a73e8; color: white; padding: 18px 24px; font-size: 18px; font-weight: 600; }
-  .messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
-  .message { max-width: 85%; padding: 12px 16px; border-radius: 12px; line-height: 1.5; font-size: 14px; white-space: pre-wrap; }
-  .user { background: #1a73e8; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
-  .bot { background: #f0f2f5; color: #1a1a1a; align-self: flex-start; border-bottom-left-radius: 4px; }
-  .bot a { color: #1a73e8; }
-  .input-area { display: flex; gap: 8px; padding: 16px 20px; border-top: 1px solid #e0e0e0; background: white; }
-  .input-area input { flex: 1; padding: 12px 16px; border: 1px solid #e0e0e0; border-radius: 24px; font-size: 14px; outline: none; }
-  .input-area input:focus { border-color: #1a73e8; }
-  .input-area button { padding: 12px 24px; background: #1a73e8; color: white; border: none; border-radius: 24px; font-size: 14px; font-weight: 500; cursor: pointer; }
-  .input-area button:disabled { opacity: 0.6; cursor: not-allowed; }
-  .typing { color: #666; font-style: italic; }
-  .error { background: #fdecea; color: #c62828; align-self: flex-start; border-bottom-left-radius: 4px; }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%); height: 100vh; display: flex; justify-content: center; align-items: center; padding: 16px; }
+  .chat-container { width: 720px; max-width: 100%; height: 90vh; background: #fff; border-radius: 12px; box-shadow: 0 8px 32px rgba(21,57,128,0.12); display: flex; flex-direction: column; overflow: hidden; position: relative; }
+  .header { background: linear-gradient(135deg, #153980 0%, #0e9856 100%); color: #fff; padding: 18px 24px; display: flex; align-items: center; gap: 14px; }
+  .header img { height: 40px; }
+  .header-text { flex: 1; }
+  .header-text h1 { font-size: 17px; font-weight: 700; letter-spacing: 0.3px; }
+  .header-text p { font-size: 11px; opacity: 0.85; margin-top: 2px; }
+  .welcome { text-align: center; padding: 40px 24px 32px; border-bottom: 1px solid #f0f0f0; }
+  .welcome img { height: 56px; margin-bottom: 14px; }
+  .welcome h2 { font-size: 20px; color: #153980; font-weight: 700; }
+  .welcome p { font-size: 13px; color: #666; margin-top: 6px; line-height: 1.5; }
+  .welcome .suggestions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 18px; }
+  .welcome .suggestions button { background: #f0f4f8; border: 1px solid #dce4ec; color: #153980; padding: 8px 16px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+  .welcome .suggestions button:hover { background: #153980; color: #fff; border-color: #153980; }
+  .messages { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 12px; }
+  .message { max-width: 88%; padding: 13px 18px; line-height: 1.6; font-size: 14px; white-space: pre-wrap; animation: fadeIn 0.25s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .user { background: linear-gradient(135deg, #153980 0%, #1a4a9e 100%); color: #fff; align-self: flex-end; border-radius: 18px 18px 4px 18px; }
+  .bot { background: #f0f4f8; color: #2b2b2b; align-self: flex-start; border-radius: 18px 18px 18px 4px; border-left: 3px solid #22b24c; }
+  .bot a { color: #153980; text-decoration: underline; }
+  .error { background: #fff0f0; color: #c62828; align-self: flex-start; border-radius: 18px 18px 18px 4px; border-left: 3px solid #c62828; }
+  .input-area { display: flex; gap: 10px; padding: 16px 24px; border-top: 1px solid #e8ecf1; background: #fff; }
+  .input-area input { flex: 1; padding: 13px 18px; border: 2px solid #e0e4e8; border-radius: 26px; font-size: 14px; outline: none; transition: border-color 0.2s; font-family: inherit; }
+  .input-area input:focus { border-color: #153980; }
+  .input-area button { padding: 13px 28px; background: linear-gradient(135deg, #22b24c 0%, #1a9a40 100%); color: #fff; border: none; border-radius: 26px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 8px rgba(34,178,76,0.3); white-space: nowrap; }
+  .input-area button:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(34,178,76,0.4); }
+  .input-area button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+  .footer { text-align: center; padding: 10px 24px; font-size: 11px; color: #999; border-top: 1px solid #f0f0f0; background: #fafafa; }
+
+  .spinner { display: inline-flex; align-items: center; gap: 5px; padding: 6px 0; }
+  .spinner .dot { width: 8px; height: 8px; border-radius: 50%; animation: bounce 1.2s infinite; }
+  .spinner .dot:nth-child(1) { background: #153980; animation-delay: 0s; }
+  .spinner .dot:nth-child(2) { background: #22b24c; animation-delay: 0.2s; }
+  .spinner .dot:nth-child(3) { background: #153980; animation-delay: 0.4s; }
+  @keyframes bounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #d0d4d8; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #b0b4b8; }
 </style>
 </head>
 <body>
 <div class="chat-container">
-  <div class="header">KFUEIT UniBot</div>
-  <div class="messages" id="messages"></div>
-  <div class="input-area">
-    <input type="text" id="input" placeholder="Ask about KFUEIT..." onkeydown="if(event.key==='Enter') send()">
-    <button id="sendBtn" onclick="send()">Send</button>
+  <div class="header">
+    <img src="https://kfueit.edu.pk/uploads/4/ueit-logo-w.png" alt="KFUEIT">
+    <div class="header-text">
+      <h1>KFUEIT UniBot</h1>
+      <p>Khwaja Fareed University of Engineering &amp; Information Technology</p>
+    </div>
   </div>
+  <div class="messages" id="messages">
+    <div class="welcome" id="welcome">
+      <img src="https://kfueit.edu.pk/uploads/4/ueit-logo-r.png" alt="KFUEIT">
+      <h2>Welcome to KFUEIT UniBot</h2>
+      <p>Ask me anything about admissions, programs,<br>fee structure, and more.</p>
+      <div class="suggestions">
+        <button onclick="quickAsk('What programs does the university offer?')">Programs offered</button>
+        <button onclick="quickAsk('What is the admission criteria?')">Admission criteria</button>
+        <button onclick="quickAsk('Does the university offer scholarships?')">Scholarships</button>
+        <button onclick="quickAsk('What are the research areas?')">Research areas</button>
+      </div>
+    </div>
+  </div>
+  <div class="input-area">
+    <input type="text" id="input" placeholder="Type your question..." onkeydown="if(event.key==='Enter') send()">
+    <button id="sendBtn" onclick="send()">Ask</button>
+  </div>
+  <div class="footer">&copy; KFUEIT UniBot &mdash; Khwaja Fareed University of Engineering &amp; Information Technology</div>
 </div>
 <script>
 const api = "/query";
 const messagesEl = document.getElementById("messages");
 const inputEl = document.getElementById("input");
 const sendBtn = document.getElementById("sendBtn");
+const welcomeEl = document.getElementById("welcome");
 
 function addMessage(text, cls) {
+  welcomeEl.style.display = "none";
   const div = document.createElement("div");
   div.className = "message " + cls;
   div.textContent = text;
@@ -204,18 +251,24 @@ function addMessage(text, cls) {
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
-function showTyping() {
+function showSpinner() {
+  welcomeEl.style.display = "none";
   const div = document.createElement("div");
-  div.className = "message bot typing";
-  div.id = "typing";
-  div.textContent = "Thinking...";
+  div.className = "message bot";
+  div.id = "spinnerMsg";
+  div.innerHTML = '<div class="spinner"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
   messagesEl.appendChild(div);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
-function hideTyping() {
-  const el = document.getElementById("typing");
+function hideSpinner() {
+  const el = document.getElementById("spinnerMsg");
   if (el) el.remove();
+}
+
+function quickAsk(q) {
+  inputEl.value = q;
+  send();
 }
 
 async function send() {
@@ -224,18 +277,20 @@ async function send() {
   addMessage(q, "user");
   inputEl.value = "";
   sendBtn.disabled = true;
-  showTyping();
+  showSpinner();
   try {
     const res = await fetch(api, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query_text: q }) });
     const data = await res.json();
-    hideTyping();
+    hideSpinner();
     if (data.status === "answered") {
       addMessage(data.answer_text, "bot");
+    } else if (data.status === "abstained") {
+      addMessage("I couldn't verify that answer. Please try rephrasing your question.", "bot");
     } else {
-      addMessage("Sorry, I couldn't find an answer.", "bot");
+      addMessage("I couldn't find an answer. Please try a different question.", "bot");
     }
   } catch (e) {
-    hideTyping();
+    hideSpinner();
     addMessage("Network error: " + e.message, "error");
   } finally {
     sendBtn.disabled = false;
