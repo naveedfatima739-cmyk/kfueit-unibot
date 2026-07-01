@@ -118,10 +118,17 @@ def build_query_runtime(settings: Settings) -> QueryRuntimeDeps:
             from unibot.retrieval.semantic_classifier import SemanticQueryClassifier
 
             dense_provider = embedding_provider._dense_provider  # type: ignore[attr-defined]
-            semantic_classifier = SemanticQueryClassifier(
-                dense_embedding_provider=dense_provider,
-                threshold=getattr(settings, "semantic_classifier_threshold", 0.6),
-            )
+            try:
+                semantic_classifier = SemanticQueryClassifier(
+                    dense_embedding_provider=dense_provider,
+                    threshold=getattr(settings, "semantic_classifier_threshold", 0.6),
+                )
+            except Exception:
+                logger.exception(
+                    "Failed to build semantic classifier; "
+                    "falling back to keyword classifier"
+                )
+                semantic_classifier = None
 
     query_rewriter = create_query_rewriter(
         settings=settings,

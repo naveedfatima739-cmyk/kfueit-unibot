@@ -1,0 +1,541 @@
+﻿#    uv export --frozen --no-dev --no-hashes
+-e .
+aiofiles==25.1.0
+    # via crawl4ai
+aiohappyeyeballs==2.6.1
+    # via aiohttp
+aiohttp==3.13.5
+    # via
+    #   crawl4ai
+    #   instructor
+    #   unclecode-litellm
+aiosignal==1.4.0
+    # via aiohttp
+aiosqlite==0.22.1
+    # via crawl4ai
+alembic==1.18.4
+    # via unibot
+alphashape==1.3.1
+    # via crawl4ai
+annotated-doc==0.0.4
+    # via
+    #   fastapi
+    #   typer
+annotated-types==0.7.0
+    # via pydantic
+anyio==4.13.0
+    # via
+    #   crawl4ai
+    #   httpx
+    #   landingai-ade
+    #   openai
+    #   starlette
+attrs==26.1.0
+    # via
+    #   aiohttp
+    #   jsonschema
+    #   referencing
+beautifulsoup4==4.14.3
+    # via
+    #   crawl4ai
+    #   unibot
+boto3==1.42.81
+    # via unibot
+botocore==1.42.81
+    # via
+    #   boto3
+    #   s3transfer
+brotli==1.2.0
+    # via crawl4ai
+cachetools==7.0.5
+    # via unibot
+certifi==2026.2.25
+    # via
+    #   httpcore
+    #   httpx
+    #   requests
+cffi==2.0.0 ; platform_python_implementation != 'PyPy'
+    # via cryptography
+chardet==7.4.0.post2
+    # via crawl4ai
+charset-normalizer==3.4.6
+    # via requests
+click==8.3.1
+    # via
+    #   alphashape
+    #   click-log
+    #   crawl4ai
+    #   nltk
+    #   typer
+    #   unclecode-litellm
+    #   uvicorn
+click-log==0.4.0
+    # via alphashape
+colorama==0.4.6 ; sys_platform == 'win32'
+    # via
+    #   click
+    #   loguru
+    #   tqdm
+crawl4ai==0.8.6
+    # via unibot
+cryptography==46.0.6
+    # via pyopenssl
+cssselect==1.4.0
+    # via crawl4ai
+cuda-bindings==13.2.0 ; sys_platform == 'linux'
+    # via torch
+cuda-pathfinder==1.5.0 ; sys_platform == 'linux'
+    # via cuda-bindings
+cuda-toolkit==13.0.2 ; sys_platform == 'linux'
+    # via torch
+diskcache==5.6.3
+    # via instructor
+distro==1.9.0
+    # via
+    #   landingai-ade
+    #   openai
+docstring-parser==0.17.0
+    # via instructor
+easydict==1.13
+    # via rag-fact-checker
+fake-useragent==2.2.0
+    # via crawl4ai
+fastapi==0.135.3
+    # via unibot
+fastembed==0.8.0
+    # via unibot
+fastuuid==0.14.0
+    # via unclecode-litellm
+filelock==3.25.2
+    # via
+    #   huggingface-hub
+    #   torch
+flatbuffers==25.12.19
+    # via onnxruntime
+frozenlist==1.8.0
+    # via
+    #   aiohttp
+    #   aiosignal
+fsspec==2026.3.0
+    # via
+    #   huggingface-hub
+    #   torch
+greenlet==3.3.2
+    # via
+    #   patchright
+    #   playwright
+    #   sqlalchemy
+grpcio==1.80.0
+    # via qdrant-client
+h11==0.16.0
+    # via
+    #   httpcore
+    #   uvicorn
+h2==4.3.0
+    # via httpx
+hf-xet==1.4.3 ; platform_machine == 'AMD64' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64'
+    # via huggingface-hub
+hpack==4.1.0
+    # via h2
+httpcore==1.0.9
+    # via httpx
+httpx==0.28.1
+    # via
+    #   crawl4ai
+    #   huggingface-hub
+    #   landingai-ade
+    #   openai
+    #   qdrant-client
+    #   unclecode-litellm
+    #   unibot
+huggingface-hub==1.8.0
+    # via
+    #   fastembed
+    #   sentence-transformers
+    #   tokenizers
+    #   transformers
+humanize==4.15.0
+    # via crawl4ai
+hyperframe==6.1.0
+    # via h2
+idna==3.11
+    # via
+    #   anyio
+    #   httpx
+    #   requests
+    #   yarl
+importlib-metadata==9.0.0
+    # via unclecode-litellm
+inquirerpy==0.3.4
+    # via unibot
+instructor==1.14.5
+    # via unibot
+jinja2==3.1.6
+    # via
+    #   instructor
+    #   torch
+    #   unclecode-litellm
+jiter==0.11.1
+    # via
+    #   instructor
+    #   openai
+jmespath==1.1.0
+    # via
+    #   boto3
+    #   botocore
+joblib==1.5.3
+    # via
+    #   nltk
+    #   scikit-learn
+jsonschema==4.26.0
+    # via unclecode-litellm
+jsonschema-specifications==2025.9.1
+    # via jsonschema
+landingai-ade==1.9.0
+    # via unibot
+lark==1.3.1
+    # via crawl4ai
+lettucedetect==0.1.8
+    # via unibot
+loguru==0.7.3
+    # via fastembed
+lxml==5.4.0
+    # via
+    #   crawl4ai
+    #   python-pptx
+    #   unibot
+mako==1.3.10
+    # via alembic
+markdown-it-py==4.0.0
+    # via rich
+markupsafe==3.0.3
+    # via
+    #   jinja2
+    #   mako
+mdurl==0.1.2
+    # via markdown-it-py
+mmh3==5.2.1
+    # via fastembed
+mpmath==1.3.0
+    # via sympy
+multidict==6.7.1
+    # via
+    #   aiohttp
+    #   yarl
+networkx==3.6.1
+    # via
+    #   alphashape
+    #   torch
+nltk==3.9.4
+    # via crawl4ai
+numpy==2.4.4
+    # via
+    #   alphashape
+    #   crawl4ai
+    #   fastembed
+    #   lettucedetect
+    #   onnxruntime
+    #   qdrant-client
+    #   rank-bm25
+    #   scikit-learn
+    #   scipy
+    #   sentence-transformers
+    #   shapely
+    #   transformers
+    #   trimesh
+nvidia-cublas==13.1.0.3 ; sys_platform == 'linux'
+    # via
+    #   cuda-toolkit
+    #   nvidia-cudnn-cu13
+    #   nvidia-cusolver
+nvidia-cuda-cupti==13.0.85 ; sys_platform == 'linux'
+    # via cuda-toolkit
+nvidia-cuda-nvrtc==13.0.88 ; sys_platform == 'linux'
+    # via cuda-toolkit
+nvidia-cuda-runtime==13.0.96 ; sys_platform == 'linux'
+    # via cuda-toolkit
+nvidia-cudnn-cu13==9.19.0.56 ; sys_platform == 'linux'
+    # via torch
+nvidia-cufft==12.0.0.61 ; sys_platform == 'linux'
+    # via cuda-toolkit
+nvidia-cufile==1.15.1.6 ; sys_platform == 'linux'
+    # via cuda-toolkit
+nvidia-curand==10.4.0.35 ; sys_platform == 'linux'
+    # via cuda-toolkit
+nvidia-cusolver==12.0.4.66 ; sys_platform == 'linux'
+    # via cuda-toolkit
+nvidia-cusparse==12.6.3.3 ; sys_platform == 'linux'
+    # via
+    #   cuda-toolkit
+    #   nvidia-cusolver
+nvidia-cusparselt-cu13==0.8.0 ; sys_platform == 'linux'
+    # via torch
+nvidia-nccl-cu13==2.28.9 ; sys_platform == 'linux'
+    # via torch
+nvidia-nvjitlink==13.0.88 ; sys_platform == 'linux'
+    # via
+    #   cuda-toolkit
+    #   nvidia-cufft
+    #   nvidia-cusolver
+    #   nvidia-cusparse
+nvidia-nvshmem-cu13==3.4.5 ; sys_platform == 'linux'
+    # via torch
+nvidia-nvtx==13.0.85 ; sys_platform == 'linux'
+    # via cuda-toolkit
+onnxruntime==1.24.4
+    # via fastembed
+openai==2.30.0
+    # via
+    #   instructor
+    #   lettucedetect
+    #   rag-fact-checker
+    #   unclecode-litellm
+orjson==3.11.8
+    # via unibot
+packaging==26.0
+    # via
+    #   huggingface-hub
+    #   onnxruntime
+    #   transformers
+patchright==1.58.2
+    # via crawl4ai
+pfzy==0.3.4
+    # via inquirerpy
+pillow==12.2.0
+    # via
+    #   crawl4ai
+    #   fastembed
+    #   python-pptx
+playwright==1.58.0
+    # via
+    #   crawl4ai
+    #   playwright-stealth
+playwright-stealth==2.0.2
+    # via crawl4ai
+portalocker==3.2.0
+    # via qdrant-client
+prompt-toolkit==3.0.52
+    # via inquirerpy
+propcache==0.4.1
+    # via
+    #   aiohttp
+    #   yarl
+protobuf==7.34.1
+    # via
+    #   onnxruntime
+    #   qdrant-client
+psutil==7.2.2
+    # via crawl4ai
+psycopg==3.3.3
+    # via unibot
+psycopg-binary==3.3.3 ; implementation_name != 'pypy'
+    # via psycopg
+py-rust-stemmers==0.1.5
+    # via fastembed
+pybreaker==1.4.1
+    # via unibot
+pycparser==3.0 ; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'
+    # via cffi
+pydantic==2.12.5
+    # via
+    #   crawl4ai
+    #   fastapi
+    #   instructor
+    #   landingai-ade
+    #   openai
+    #   pydantic-settings
+    #   qdrant-client
+    #   unclecode-litellm
+pydantic-core==2.41.5
+    # via
+    #   instructor
+    #   pydantic
+pydantic-settings==2.13.1
+    # via unibot
+pyee==13.0.1
+    # via
+    #   patchright
+    #   playwright
+pygments==2.20.0
+    # via rich
+pyopenssl==26.0.0
+    # via crawl4ai
+python-dateutil==2.9.0.post0
+    # via botocore
+python-dotenv==1.0.1
+    # via
+    #   crawl4ai
+    #   pydantic-settings
+    #   rag-fact-checker
+    #   unclecode-litellm
+python-pptx==1.0.2
+    # via unibot
+pywin32==311 ; sys_platform == 'win32'
+    # via portalocker
+pyyaml==6.0.3
+    # via
+    #   crawl4ai
+    #   huggingface-hub
+    #   transformers
+qdrant-client==1.17.1
+    # via unibot
+rag-fact-checker==0.1.5
+    # via lettucedetect
+rank-bm25==0.2.2
+    # via crawl4ai
+referencing==0.37.0
+    # via
+    #   jsonschema
+    #   jsonschema-specifications
+regex==2026.3.32
+    # via
+    #   nltk
+    #   tiktoken
+    #   transformers
+requests==2.33.1
+    # via
+    #   crawl4ai
+    #   fastembed
+    #   instructor
+    #   tiktoken
+rich==14.3.3
+    # via
+    #   crawl4ai
+    #   instructor
+    #   typer
+    #   unibot
+rpds-py==0.30.0
+    # via
+    #   jsonschema
+    #   referencing
+rtree==1.4.1
+    # via alphashape
+s3transfer==0.16.0
+    # via boto3
+safetensors==0.7.0
+    # via transformers
+scikit-learn==1.8.0
+    # via
+    #   lettucedetect
+    #   sentence-transformers
+scipy==1.17.1
+    # via
+    #   alphashape
+    #   scikit-learn
+    #   sentence-transformers
+sentence-transformers==5.3.0
+    # via unibot
+setuptools==81.0.0
+    # via torch
+shapely==2.1.2
+    # via
+    #   alphashape
+    #   crawl4ai
+shellingham==1.5.4
+    # via typer
+six==1.17.0
+    # via python-dateutil
+sniffio==1.3.1
+    # via
+    #   landingai-ade
+    #   openai
+snowballstemmer==2.2.0
+    # via crawl4ai
+soupsieve==2.8.3
+    # via beautifulsoup4
+sqlalchemy==2.0.48
+    # via
+    #   alembic
+    #   unibot
+starlette==1.0.0
+    # via fastapi
+structlog==25.5.0
+    # via unibot
+sympy==1.14.0
+    # via
+    #   onnxruntime
+    #   torch
+tenacity==9.1.4
+    # via
+    #   instructor
+    #   unibot
+threadpoolctl==3.6.0
+    # via scikit-learn
+tiktoken==0.12.0
+    # via unclecode-litellm
+tokenizers==0.22.2
+    # via
+    #   fastembed
+    #   transformers
+    #   unclecode-litellm
+torch==2.11.0
+    # via
+    #   lettucedetect
+    #   sentence-transformers
+tqdm==4.67.3
+    # via
+    #   fastembed
+    #   huggingface-hub
+    #   lettucedetect
+    #   nltk
+    #   openai
+    #   sentence-transformers
+    #   transformers
+transformers==5.4.0
+    # via
+    #   lettucedetect
+    #   sentence-transformers
+trimesh==4.11.5
+    # via alphashape
+triton==3.6.0 ; sys_platform == 'linux'
+    # via torch
+typer==0.21.2
+    # via
+    #   huggingface-hub
+    #   instructor
+    #   transformers
+typing-extensions==4.15.0
+    # via
+    #   alembic
+    #   beautifulsoup4
+    #   fastapi
+    #   grpcio
+    #   huggingface-hub
+    #   landingai-ade
+    #   openai
+    #   pydantic
+    #   pydantic-core
+    #   pyee
+    #   python-pptx
+    #   sentence-transformers
+    #   sqlalchemy
+    #   torch
+    #   typing-inspection
+typing-inspection==0.4.2
+    # via
+    #   fastapi
+    #   pydantic
+    #   pydantic-settings
+tzdata==2025.3 ; sys_platform == 'win32'
+    # via psycopg
+unclecode-litellm==1.81.13
+    # via crawl4ai
+urllib3==2.6.3
+    # via
+    #   botocore
+    #   qdrant-client
+    #   requests
+uvicorn==0.42.0
+    # via unibot
+wcwidth==0.6.0
+    # via prompt-toolkit
+win32-setctime==1.2.0 ; sys_platform == 'win32'
+    # via loguru
+xlsxwriter==3.2.9
+    # via python-pptx
+xxhash==3.6.0
+    # via crawl4ai
+yarl==1.23.0
+    # via aiohttp
+zipp==3.23.0
+    # via importlib-metadata

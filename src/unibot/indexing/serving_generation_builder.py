@@ -16,7 +16,7 @@ from unibot.verify.value_identity import value_hash_for_stored_record
 from unibot.indexing.chunks import IndexChunk, build_chunks
 from unibot.db.repositories.contextual_chunk_cache import ContextualChunkCacheRepository
 from unibot.indexing.contextualization_service import ContextualizationService
-from unibot.indexing.embeddings import DenseSparseEmbeddingProvider, EmbeddingResult, embed_chunks
+from unibot.indexing.embeddings import DenseSparseEmbeddingProvider, EmbeddedChunk
 from unibot.indexing.qdrant_writer import QdrantWriter
 from unibot.pipeline.contracts import CycleProgressCallback
 from unibot.retrieval.filters import QUERYABLE_SERVING_STATUSES as _SERVING_ELIGIBLE_STATUSES
@@ -126,51 +126,150 @@ class ServingGenerationBuilder:
         if self._progress:
             self._progress.on_phase_done("contextualize")
 
-        # --- Phase 4: Embed chunks ---
+        # --- Phase 4+5: Embed chunks and upsert to Qdrant in streaming batches ---
         if self._progress:
             self._progress.on_phase_start("embed", total=len(chunks))
             self._progress.on_generation_step("embedding", f"Embedding {len(chunks)} chunks")
+
         eligible_chunk_count = len(chunks)
+        active_chunks = [c for c in chunks if c.is_active] if eligible_chunk_count > 0 else []
+        del chunks  # free original chunk tuple early
+        total = len(active_chunks)
+        dense_vector_size: int | None = None
+        new_record_ids: set[str] = set()
+        failed_record_version_ids: list[str] = []
 
-        def _embed_progress(completed: int, total: int) -> None:
+        def _progress(n: int) -> None:
             if self._progress:
-                self._progress.on_generation_progress(completed, total)
+                self._progress.on_generation_progress(n, total)
 
-        embeddings = embed_chunks(chunks, self._embedding_provider, progress=_embed_progress)
+        embed_success = False
+        embed_batch_fn = getattr(self._embedding_provider, "embed_document_batch", None)
 
-        if eligible_chunk_count > 0 and not embeddings.embedded_chunks:
-            raise RuntimeError(
-                "Serving generation build produced zero successful chunks; alias activation aborted."
-            )
-        if self._progress:
-            self._progress.on_phase_done("embed")
+        if callable(embed_batch_fn):
+            _EMBED_BATCH = 16
+            for batch_start in range(0, total, _EMBED_BATCH):
+                batch = active_chunks[batch_start:batch_start + _EMBED_BATCH]
+                batch_end = batch_start + len(batch)
 
-        # --- Phase 5: Qdrant writes (NO session) ---
-        if self._progress:
-            self._progress.on_phase_start("index")
-            self._progress.on_generation_step("indexing", f"Upserting {len(embeddings.embedded_chunks)} vectors to Qdrant")
-        if embeddings.embedded_chunks:
-            dense_vector_size = len(embeddings.embedded_chunks[0].vectors.dense_vector)
-            self._qdrant_writer.ensure_collection(
-                collection_name,
-                dense_vector_size=dense_vector_size,
-                fail_if_exists=True,
-            )
-            self._qdrant_writer.upsert_records(
-                collection_name,
-                [
-                    self._qdrant_writer.point_from_embedded_chunk(chunk)
-                    for chunk in embeddings.embedded_chunks
-                ],
-            )
+                try:
+                    vectors_list = embed_batch_fn([c.text for c in batch])
+                except Exception:
+                    logger.warning(
+                        "serving_generation.embed_batch_failed_falling_back",
+                        batch_start=batch_start,
+                        batch_size=len(batch),
+                        exc_info=True,
+                    )
+                    fallback_pos = batch_start
+                    for chunk in batch:
+                        try:
+                            vectors = embed_batch_fn([chunk.text])[0]
+                        except Exception:
+                            logger.warning(
+                                "serving_generation.embed_chunk_failed",
+                                record_version_id=chunk.record_version_id,
+                                chunk_id=chunk.chunk_id,
+                                exc_info=True,
+                            )
+                            failed_record_version_ids.append(chunk.record_version_id)
+                            fallback_pos += 1
+                            _progress(fallback_pos)
+                            continue
+                        if dense_vector_size is None:
+                            dense_vector_size = len(vectors.dense_vector)
+                            self._qdrant_writer.ensure_collection(
+                                collection_name,
+                                dense_vector_size=dense_vector_size,
+                                fail_if_exists=True,
+                            )
+                        ec = EmbeddedChunk(
+                            chunk=chunk,
+                            record_version_id=chunk.record_version_id,
+                            vectors=vectors,
+                        )
+                        self._qdrant_writer.upsert_records(
+                            collection_name,
+                            [self._qdrant_writer.point_from_embedded_chunk(ec)],
+                        )
+                        new_record_ids.add(ec.record_version_id)
+                        embed_success = True
+                        fallback_pos += 1
+                        _progress(fallback_pos)
+                    continue
+
+                batch_embedded = [
+                    EmbeddedChunk(chunk=c, record_version_id=c.record_version_id, vectors=v)
+                    for c, v in zip(batch, vectors_list, strict=True)
+                ]
+                del vectors_list
+
+                if dense_vector_size is None and batch_embedded:
+                    dense_vector_size = len(batch_embedded[0].vectors.dense_vector)
+                    self._qdrant_writer.ensure_collection(
+                        collection_name,
+                        dense_vector_size=dense_vector_size,
+                        fail_if_exists=True,
+                    )
+
+                if batch_embedded:
+                    points = [self._qdrant_writer.point_from_embedded_chunk(ec) for ec in batch_embedded]
+                    self._qdrant_writer.upsert_records(collection_name, points)
+                    embed_success = True
+                    for ec in batch_embedded:
+                        new_record_ids.add(ec.record_version_id)
+                    del points, batch_embedded
+
+                _progress(batch_end)
+                del batch
         else:
+            from unibot.indexing.embeddings import embed_document_text
+            for i, chunk in enumerate(active_chunks, 1):
+                try:
+                    vectors = embed_document_text(self._embedding_provider, chunk.text)
+                except Exception:
+                    logger.warning(
+                        "serving_generation.embed_chunk_failed",
+                        record_version_id=chunk.record_version_id,
+                        chunk_id=chunk.chunk_id,
+                        exc_info=True,
+                    )
+                    failed_record_version_ids.append(chunk.record_version_id)
+                else:
+                    if dense_vector_size is None:
+                        dense_vector_size = len(vectors.dense_vector)
+                        self._qdrant_writer.ensure_collection(
+                            collection_name,
+                            dense_vector_size=dense_vector_size,
+                            fail_if_exists=True,
+                        )
+                    ec = EmbeddedChunk(
+                        chunk=chunk,
+                        record_version_id=chunk.record_version_id,
+                        vectors=vectors,
+                    )
+                    self._qdrant_writer.upsert_records(
+                        collection_name,
+                        [self._qdrant_writer.point_from_embedded_chunk(ec)],
+                    )
+                    new_record_ids.add(ec.record_version_id)
+                    embed_success = True
+                _progress(i)
+            del chunk
+
+        del active_chunks
+
+        if not embed_success:
+            if eligible_chunk_count > 0:
+                raise RuntimeError(
+                    "Serving generation build produced zero successful chunks; alias activation aborted."
+                )
             self._qdrant_writer.ensure_collection(collection_name, dense_vector_size=1)
 
-        new_record_ids = {chunk.record_version_id for chunk in embeddings.embedded_chunks}
         to_deindex = tuple(sorted(previous_record_ids - new_record_ids))
         to_activate = tuple(sorted(new_record_ids))
         if self._progress:
-            self._progress.on_phase_done("index")
+            self._progress.on_phase_done("embed")
 
         # --- Phase 6: Alias switch + DB activation (short session) ---
         if self._progress:
@@ -191,7 +290,8 @@ class ServingGenerationBuilder:
             merged_generation = activation_session.merge(generation)
             merged_generation.generation_metadata = self._build_generation_metadata(
                 session=activation_session,
-                embeddings=embeddings,
+                record_version_ids=new_record_ids,
+                failed_record_version_ids=failed_record_version_ids,
                 dedupe_result=dedupe_result,
             )
             # For transactional atomicity, retire-old + activate-new +
@@ -252,7 +352,7 @@ class ServingGenerationBuilder:
             record_version_ids=tuple(
                 str(v) for v in cast(list[str], generation.generation_metadata["record_version_ids"])
             ),
-            failed_record_version_ids=embeddings.failed_record_version_ids,
+            failed_record_version_ids=tuple(failed_record_version_ids),
         )
 
     def recover_on_startup(self) -> None:
@@ -344,7 +444,8 @@ class ServingGenerationBuilder:
         return service.contextualize(chunks=chunks, decisions=decisions)
 
     def _build_generation_metadata(
-        self, *, session: Session, embeddings: EmbeddingResult, dedupe_result: DedupeResult
+        self, *, session: Session, record_version_ids: set[str],
+        failed_record_version_ids: list[str], dedupe_result: DedupeResult,
     ) -> dict[str, object]:
         persisted_conflicts: dict[str, list[str]] = defaultdict(list)
         contradictory_rows = session.execute(
@@ -357,10 +458,8 @@ class ServingGenerationBuilder:
             persisted_conflicts[row.dedupe_key].append(row.record_version_id)
 
         return {
-            "record_version_ids": sorted(
-                {chunk.record_version_id for chunk in embeddings.embedded_chunks}
-            ),
-            "failed_record_version_ids": list(embeddings.failed_record_version_ids),
+            "record_version_ids": sorted(record_version_ids),
+            "failed_record_version_ids": list(failed_record_version_ids),
             "duplicate_conflicts": [
                 {
                     "dedupe_key": dedupe_key,

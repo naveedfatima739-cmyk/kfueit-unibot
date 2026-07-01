@@ -139,10 +139,7 @@ class Settings(BaseSettings):
             dense_backend == "hashing" or sparse_backend == "hashing"
         ):
             raise ValueError("Hashing embedding providers are development/test only")
-        if self.environment == "production" and sparse_backend == "token":
-            raise ValueError(
-                "Token sparse embeddings are not supported in production; use fastembed."
-            )
+
         if dense_backend == "cohere" and not self.cohere_api_key:
             raise ValueError(
                 "UNIBOT_COHERE_API_KEY is required when using Cohere embeddings"

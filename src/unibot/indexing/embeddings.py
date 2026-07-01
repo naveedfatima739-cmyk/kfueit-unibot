@@ -10,7 +10,7 @@ from unibot.indexing.chunks import IndexChunk
 
 logger = structlog.get_logger(__name__)
 
-_EMBED_BATCH_SIZE = 96
+_EMBED_BATCH_SIZE = 16
 
 
 @dataclass(frozen=True, slots=True)

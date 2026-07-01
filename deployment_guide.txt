@@ -1,0 +1,368 @@
+--- Page 1 ---
+D E P L O Y M E N T  G U I D E
+UniBot on Render
+Deploying the retrieval backend as a Render Web Service
+Audience Partner university engineering and operations teams
+Applies to The exported UniBot FastAPI backend, wired to your data
+Target Render Web Service (native Python runtime)
+Stack Python 3.13, uv, FastAPI / uvicorn, Neon Postgres, Qdrant
+Date 24 June 2026
+This guide mirrors how the reference UniBot pipeline is deployed on Render. Adapt names, regions, and provider keys to 
+your own accounts.
+
+--- Page 2 ---
+UniBot Render Deployment Guide Render Web Service
+Contents
+1 What you are deploying . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 2
+1.1 How the pieces map to Render . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 2
+1.2 Why the API and the pipeline are decoupled . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 2
+2 Prerequisites . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 2
+3 Provision the data stores . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+3.1 PostgreSQL (Neon) . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+3.2 Qdrant . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+3.3 Apply database migrations . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+4 Create the Render Web Service . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+4.1 Core service settings . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+4.2 Pre-deploy command (migrations) . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+4.3 Health checks and the missing endpoint . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+5 Environment variables . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+5.1 Required . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+5.2 Recommended . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+5.3 Optional features . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+6 Build the first serving generation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+6.1 Where to run it . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+6.2 Crawl environment notes . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+7 Verify and operate . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+7.1 Smoke test . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+7.2 Sizing and memory . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 7
+7.3 Faster cold starts (optional) . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 7
+7.4 Publishing fresh data without downtime . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 7
+7.5 Rollback and secrets . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 7
+8 Troubleshooting . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 7
+9 Appendix A: render.yaml blueprint . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 8
+10 Appendix B: connecting the frontend . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+11 Appendix C: configuration reference . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+UniBot Page 1 of 9
+
+--- Page 3 ---
+UniBot Render Deployment Guide Render Web Service
+1 What you are deploying
+UniBot has two halves that meet at a shared database and a shared Qdrant vector store:
+• An offline pipeline  ( update-cycle ) that crawls, verifies, indexes, and builds an immutable serving 
+generation.
+• An online query path (the FastAPI server) that answers questions from the active generation.
+This guide deploys the online query path as a Render Web Service. The offline pipeline is covered in Section 
+6, because the API serves nothing until at least one generation has been built and activated.
+1.1 How the pieces map to Render
+Component Where it runs
+FastAPI query API Render Web Service (the subject of this guide)
+Offline update-cycle Render Cron Job, a one-off Job, or any host that can reach the same database 
+and Qdrant (see Section 6)
+PostgreSQL Neon, external to Render (direct + pooled connection strings)
+Vector store Qdrant Cloud or a self-hosted Qdrant instance, external to Render
+1.2 Why the API and the pipeline are decoupled
+The Web Service reads whichever generation is marked active in the database and pointed to by the 
+unibot-active  Qdrant alias. When the pipeline finishes, it flips the alias and the database generation flag 
+atomically. The running API picks up the new generation on its next query. No redeploy or restart is 
+required to publish fresh data.
+Note
+This decoupling means you do not have to run the crawler on Render. You can build generations on any 
+machine that can reach the same Neon database and Qdrant instance, and the Render API will serve 
+the result. Many teams run the API on Render and the heavy update-cycle  elsewhere.
+2 Prerequisites
+Before starting, have the following ready:
+• A Render account  with a paid instance type available. The API loads local models (sparse SPLADE 
+embeddings and the grounding model), so the free and smallest instances do not have enough memory. 
+See Section 7.2.
+• Your repository connected to Render through GitHub or GitLab. The exported backend should contain 
+pyproject.toml , uv.lock , alembic.ini , the src/  package, and main.py  (the uvicorn target is 
+main:create_app ).
+• A Neon PostgreSQL database with both connection strings:
+‣ a direct DSN for writes and migrations,
+‣ a pooled DSN (pooler host) for reads.
+• A Qdrant instance (Qdrant Cloud URL and API key, or a self-hosted URL).
+• A Cohere API key. In production mode the dense embeddings, reranker, and default answer model resolve 
+to Cohere, so this key is required.
+• Optional provider keys , depending on the features you enable: OpenRouter (alternative answer model 
+and query rewriting), Exa (live web search), and a LandingAI VISION_AGENT_API_KEY  for the document 
+parser used during crawling.
+UniBot Page 2 of 9
+
+--- Page 4 ---
+UniBot Render Deployment Guide Render Web Service
+Note
+All backend configuration is read from UNIBOT_ -prefixed environment variables. You will set these 
+on Render as service environment variables or an environment group. Never commit secrets to the 
+repository.
+3 Provision the data stores
+3.1 PostgreSQL (Neon)
+Create a Neon project and collect two connection strings. Both must use the postgresql+psycopg  driver 
+prefix and SSL:
+UNIBOT_POSTGRES_DIRECT_DSN="postgresql+psycopg://USER:PASS@HOST/db?sslmode=require"
+UNIBOT_POSTGRES_POOLED_DSN="postgresql+psycopg://USER:PASS@HOST-pooler/db?sslmode=
+require"
+The pooled DSN must target the Neon pooler host. The direct DSN is used for writes and for running 
+migrations.
+3.2 Qdrant
+Create a Qdrant Cloud cluster (or stand up your own). Note the URL and, if enabled, the API key:
+UNIBOT_QDRANT_URL="https://YOUR-CLUSTER.qdrant.io:6333"
+UNIBOT_QDRANT_API_KEY="..."   # omit if your instance has no auth
+3.3 Apply database migrations
+Schema is managed with Alembic. Run migrations once against the direct DSN before the first deploy. You 
+can do this from your laptop, or set it as the Web Service pre-deploy command (see Section 4.2):
+uv run alembic upgrade head
+Tip
+Verify both connections before deploying with the built-in check: 
+uv run unibot check-neon-connection .
+4 Create the Render Web Service
+In the Render dashboard, choose New > Web Service and select your connected repository. Configure it 
+as follows.
+4.1 Core service settings
+Setting Value
+Language / Runtime Python 3
+Instance type At least 2 GB RAM (see Section 7.2)
+Build command pip install uv && uv sync --frozen --no-dev
+Start command uv run unibot serve-api --host 0.0.0.0 --port $PORT
+UniBot Page 3 of 9
+
+--- Page 5 ---
+UniBot Render Deployment Guide Render Web Service
+Health check path Leave blank, or add a /health  route (see Section 4.3)
+Two details make the start command correct on Render:
+• --host 0.0.0.0  binds all interfaces. The default bind is 127.0.0.1 , which Render cannot reach.
+• --port $PORT  uses the port Render injects. Do not hard-code a port.
+Pin the Python version by keeping the .python-version  file ( 3.13 ) in the repository, or set 
+PYTHON_VERSION=3.13  in the environment. The --frozen  flag installs exactly what uv.lock  specifies; 
+--no-dev  skips test and lint dependencies.
+4.2 Pre-deploy command (migrations)
+Set the pre-deploy command so each deploy applies pending migrations before the new instance goes live:
+uv run alembic upgrade head
+This runs against UNIBOT_POSTGRES_DIRECT_DSN . If your plan does not offer a pre-deploy command, run 
+alembic upgrade head  manually from a Render Shell or from your laptop whenever the schema changes.
+4.3 Health checks and the missing endpoint
+The API does not currently expose an unauthenticated GET  endpoint that returns 200 . The query endpoints 
+are POST  and the admin endpoints require the X-Admin-Key  header. You have two options:
+1. Leave the Render health check path blank. Render then confirms liveness by detecting that the service 
+has bound its port. This is the simplest path and works out of the box.
+2. Add a tiny health route and point Render’s health check path at it. This gives Render a real HTTP signal. 
+A minimal addition to your API (for example in src/unibot/api/app.py , before the routers are included) 
+looks like:
+@app.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok"}
+Note
+The first request after a cold start warms the grounding model and embedding providers, so the very 
+first query is slower than steady state. Keep this in mind if you wire an external uptime monitor.
+5 Environment variables
+Set these on the Web Service. Group the shared ones into a Render environment group if you also run a 
+Cron Job, so both reuse the same values.
+5.1 Required
+Variable Value / notes
+UNIBOT_ENVIRONMENT production  (selects Cohere / FastEmbed / LettuceDetect backends)
+UNIBOT_POSTGRES_DIRECT_DSN Neon direct DSN, postgresql+psycopg , SSL
+UNIBOT_POSTGRES_POOLED_DSN Neon pooled DSN (pooler host)
+UNIBOT_QDRANT_URL Qdrant URL
+UNIBOT_COHERE_API_KEY Required: dense embeddings, reranking, and the default answer 
+model use Cohere
+UniBot Page 4 of 9
+
+--- Page 6 ---
+UniBot Render Deployment Guide Render Web Service
+5.2 Recommended
+Variable Value / notes
+UNIBOT_QDRANT_API_KEY Qdrant auth, if your instance requires it
+UNIBOT_ADMIN_API_KEY Value expected in the X-Admin-Key  header for /admin/*  endpoints
+UNIBOT_GROUNDING_MODEL KRLabsOrg/tinylettuce-ettin-68m-en  (see the grounding model note  
+below)
+5.2.1 Grounding model: pull from the Hub
+In production the grounding verifier loads a LettuceDetect model. The default value is a local path  
+( models/tinylettuce-ettin-68m-en ), and that models/  directory is gitignored, so it is not present in your 
+repository or on Render.
+Set the grounding model to its HuggingFace identifier so the weights download automatically on first load:
+UNIBOT_GROUNDING_MODEL="KRLabsOrg/tinylettuce-ettin-68m-en"
+The loader passes this value straight through to the model library, which accepts either a local path or a Hub 
+id. The download (a small 68M-parameter model) is cached on the instance and reused.
+Important
+If you leave UNIBOT_GROUNDING_MODEL  at its default while models/  is absent, grounding verification 
+fails to load and answers are rejected. Always set the Hub id on Render, or vendor the weights yourself.
+5.3 Optional features
+Enable these only if you use the corresponding feature. Defaults are listed in README.md  (Configuration 
+section).
+Variable Purpose
+UNIBOT_OPENROUTER_API_KEY Answer generation or query rewriting via 
+OpenRouter
+UNIBOT_LIVE_SEARCH_ENABLED  + UNIBOT_EXA_API_KEY Live web search backend 
+( answer_backend: "live" ), restricted to 
+your domain allowlist
+UNIBOT_QUERY_REWRITER_ENABLED LLM query rewriting before retrieval
+UNIBOT_CONTEXTUAL_RETRIEVAL_ENABLED LLM contextual chunk enrichment at build 
+time
+UNIBOT_RAW_STORAGE_BACKEND object_store  plus the S3-compatible 
+bucket settings, if you store raw snapshots 
+off the instance
+6 Build the first serving generation
+A freshly deployed API has no data to serve and will abstain on every query. Build a generation with the 
+offline pipeline. The command is:
+uv run unibot update-cycle --generation-label cycle-$(date +%Y-%m-%d)
+UniBot Page 5 of 9
+
+--- Page 7 ---
+UniBot Render Deployment Guide Render Web Service
+This crawls, extracts, verifies, embeds, indexes to a new Qdrant collection, flips the unibot-active  alias, 
+and marks the generation active. The Render API serves it immediately afterward, with no redeploy.
+6.1 Where to run it
+Option When to use it
+Render Cron Job Recurring refresh on a schedule (for example nightly). Reuses the same 
+repository, build command, and environment group as the Web Service. 
+Set the command to the update-cycle  line above and a schedule such 
+as 0 2 * * * .
+Render one-off Job / Shell A single manual build, or a backfill. Run the same command once.
+Off-Render host Any machine that can reach the same Neon database and Qdrant. Useful 
+when crawling needs a full browser environment.
+6.2 Crawl environment notes
+The crawl phase can fetch pages with a headless browser and can parse documents with the LandingAI 
+ADE backend. On Render’s native runtime, account for two things:
+• Browser rendering.  Browser-rendered sources need a Playwright Chromium browser. Add 
+uv run crawl4ai-setup  (or uv run playwright install chromium ) to the Cron Job’s build command. 
+System libraries for Chromium may still be missing on the native runtime; if browser crawling fails, run 
+update-cycle  on a host where you control system packages, or restrict crawling to static and WordPress 
+sources.
+• Document parsing.  The default document parser ( UNIBOT_DOCUMENT_PARSER_BACKEND=ade ) reads a 
+VISION_AGENT_API_KEY  from the environment. Set it on the job, or switch the parser to docling .
+Tip
+Because the API and the pipeline are decoupled, the most reliable setup is often: serve the API on 
+Render, and run update-cycle  wherever browser and system dependencies are easy to provide. The 
+API serves whatever generation is active.
+7 Verify and operate
+7.1 Smoke test
+Once the service is live and a generation is active, send a query:
+curl -s https://YOUR-SERVICE.onrender.com/query \
+  -H 'content-type: application/json' \
+  -d '{"query_text": "What programs do you offer?", "limit": 5}'
+A grounded, cited answer means the full path is working. An abstention usually means no generation is active 
+yet, build one (Section 6). Check the admin view (requires the admin key):
+curl -s https://YOUR-SERVICE.onrender.com/admin/generations \
+  -H "X-Admin-Key: $UNIBOT_ADMIN_API_KEY"
+In the Render logs at startup, expect to see the grounding model warm up, and, if live search is enabled, a 
+runtime.live_search_enabled  line.
+UniBot Page 6 of 9
+
+--- Page 8 ---
+UniBot Render Deployment Guide Render Web Service
+7.2 Sizing and memory
+The Web Service loads two local models into memory: the SPLADE sparse embedding model (downloaded 
+by FastEmbed on first use) and the LettuceDetect grounding model. Dense embeddings, reranking, and 
+answering are remote API calls (Cohere / OpenRouter), so they cost network rather than memory.
+• Start at 2 GB RAM or more. Smaller instances run out of memory while loading the sparse and grounding 
+models.
+• The Cron Job that runs update-cycle  is more demanding (embedding in batches, optional browser); give 
+it equal or larger resources.
+7.3 Faster cold starts (optional)
+FastEmbed and HuggingFace caches are rebuilt after each deploy on ephemeral disk. To avoid re-down -
+loading model weights on every deploy, attach a Render persistent disk and point the cache directories at it 
+(for example set HF_HOME  to a path on the mounted disk). This is an optimization, not a requirement.
+7.4 Publishing fresh data without downtime
+Run update-cycle  again (Cron Job or manually). It builds a new generation in a new Qdrant collection, then 
+atomically switches the alias and the active flag. The live API serves the new generation on the next query. 
+The previous collection is retired. There is no restart and no deploy.
+7.5 Rollback and secrets
+• Rollback. Render keeps previous deploys; roll back from the dashboard to revert code or configuration. 
+To revert data, re-activate a prior generation through the operator tooling rather than a code rollback.
+• Secrets. Keep all keys in Render environment variables or an environment group. Rotate the Cohere, 
+OpenRouter, Exa, and admin keys there. Do not place them in the repository.
+8 Troubleshooting
+Symptom Likely cause and fix
+Service builds but is unreachable Start command missing --host 0.0.0.0  or 
+--port $PORT . Bind all interfaces and use Render’s port.
+Every query abstains No active generation. Build one with update-cycle , then 
+re-query.
+Startup fails loading the grounding model UNIBOT_GROUNDING_MODEL  points at the gitignored local 
+path. Set it to KRLabsOrg/tinylettuce-ettin-68m-en .
+Startup error about Cohere key UNIBOT_ENVIRONMENT=production  
+requires UNIBOT_COHERE_API_KEY . Set it, or override indi -
+vidual *_BACKEND  variables.
+Out-of-memory during boot Instance too small for the local sparse + grounding models. 
+Move to 2 GB RAM or more.
+Database connection errors Wrong DSN driver or missing SSL. Use 
+postgresql+psycopg://...?sslmode=require ; pooled 
+DSN must use the pooler host.
+Crawl job fails on browser pages Playwright Chromium not installed on the runtime. Add 
+crawl4ai-setup  to the job build, or run update-cycle  off-
+Render.
+Document parsing fails during crawl VISION_AGENT_API_KEY  not set for the ADE parser, or 
+switch UNIBOT_DOCUMENT_PARSER_BACKEND  to docling .
+UniBot Page 7 of 9
+
+--- Page 9 ---
+UniBot Render Deployment Guide Render Web Service
+9 Appendix A: render.yaml blueprint
+If you prefer infrastructure as code, this Render Blueprint defines the Web Service, an optional Cron Job, 
+and a shared environment group on the native Python runtime. Treat it as a starting point and adjust plans, 
+regions, and the schedule. Values marked sync: false  are set in the dashboard so they are not stored in 
+the repository.
+services:
+  - type: web
+    name: unibot-api
+    runtime: python
+    plan: standard                 # 2 GB RAM or more
+    buildCommand: pip install uv && uv sync --frozen --no-dev
+    startCommand: uv run unibot serve-api --host 0.0.0.0 --port $PORT
+    preDeployCommand: uv run alembic upgrade head
+    autoDeploy: true
+    envVars:
+      - fromGroup: unibot-shared
+  - type: cron
+    name: unibot-update-cycle
+    runtime: python
+    plan: standard
+    schedule: "0 2 * * *"          # daily at 02:00 UTC
+    buildCommand: pip install uv && uv sync --frozen --no-dev
+    startCommand: >-
+      uv run unibot update-cycle
+      --generation-label cycle-$(date +%Y-%m-%d)
+    envVars:
+      - fromGroup: unibot-shared
+envVarGroups:
+  - name: unibot-shared
+    envVars:
+      - key: UNIBOT_ENVIRONMENT
+        value: production
+      - key: UNIBOT_GROUNDING_MODEL
+        value: KRLabsOrg/tinylettuce-ettin-68m-en
+      - key: UNIBOT_POSTGRES_DIRECT_DSN
+        sync: false
+      - key: UNIBOT_POSTGRES_POOLED_DSN
+        sync: false
+      - key: UNIBOT_QDRANT_URL
+        sync: false
+      - key: UNIBOT_QDRANT_API_KEY
+        sync: false
+      - key: UNIBOT_COHERE_API_KEY
+        sync: false
+      - key: UNIBOT_ADMIN_API_KEY
+        sync: false
+Note
+Render’s Blueprint schema evolves. Confirm the exact field names (for example the pre-deploy com -
+mand and cron command fields) against the current Render Blueprint reference for your account.
+UniBot Page 8 of 9
+
+--- Page 10 ---
+UniBot Render Deployment Guide Render Web Service
+10 Appendix B: connecting the frontend
+The chat frontend is a separate single-page app. It is not part of this Web Service. Two common ways to 
+connect it:
+• Static Site with a rewrite (recommended).  Deploy the built frontend as a Render Static Site and add a 
+rewrite rule that proxies /api/*  to the API service. This keeps API calls same-origin and avoids browser 
+CORS entirely, mirroring the local dev proxy.
+• Direct cross-origin calls.  Build the frontend with VITE_API_BASE_URL  pointing at the API origin. The 
+browser then makes cross-origin requests, so the API must send CORS headers. The exported backend 
+does not enable CORS by default, so you would add FastAPI’s CORSMiddleware  with your frontend origin 
+in the allowlist.
+11 Appendix C: configuration reference
+This guide lists the variables needed to deploy. The full configuration surface, including retrieval tuning, 
+grounding thresholds, contextual retrieval, and provider client tuning, is documented in the Configuration 
+section of README.md . All variables use the UNIBOT_  prefix and are validated by Pydantic Settings at startup. 
+Provider backends are selected automatically from UNIBOT_ENVIRONMENT  and can be overridden individually 
+with the *_BACKEND  variables.
+UniBot Page 9 of 9
+
