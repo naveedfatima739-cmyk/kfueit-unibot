@@ -310,10 +310,15 @@ async function send() {
   if (!q) return;
   addMessage(q, "user");
   inputEl.value = "";
+  inputEl.disabled = true;
   sendBtn.disabled = true;
   showSpinner();
   try {
     const res = await fetch(api, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query_text: q }) });
+    if (!res.ok) {
+      const errData = await res.json().catch(function(){ return {} });
+      throw new Error(errData.detail || "Server error (" + res.status + ")");
+    }
     const data = await res.json();
     hideSpinner();
     if (data.status === "answered") {
@@ -327,6 +332,7 @@ async function send() {
     hideSpinner();
     addMessage("Network error: " + e.message, "error");
   } finally {
+    inputEl.disabled = false;
     sendBtn.disabled = false;
     inputEl.focus();
   }

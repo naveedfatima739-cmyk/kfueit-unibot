@@ -411,18 +411,45 @@ async def query_records(payload: QueryRequest, request: Request) -> dict[str, An
                     secondary_hints=ctx.secondary_hints,
                 )
         except (httpx.HTTPError, RuntimeError) as exc:
-            logger.error(
-                "query.provider_failure",
+            logger.warning(
+                "query.provider_failure_retrying",
                 generation_id=generation.generation_id,
-                query_class=str(classification.query_class),
-                effective_source_class_hint=ctx.effective_source_class_hint,
-                record_type_hint=classification.record_type_hint,
                 exc_type=type(exc).__name__,
             )
-            raise HTTPException(
-                status_code=503,
-                detail="A provider dependency is temporarily unavailable. Please try again later.",
-            )
+            try:
+                if async_method is not None:
+                    answer_result = await async_method(
+                        payload.query_text,
+                        retrieval_query=retrieval_query,
+                        active_generation=generation,
+                        source_class_hint=ctx.effective_source_class_hint,
+                        record_type_hint=classification.record_type_hint,
+                        hint_is_user_provided=ctx.hint_is_user_provided,
+                        limit=payload.limit,
+                        secondary_hints=ctx.secondary_hints,
+                    )
+                else:
+                    answer_result = await asyncio.to_thread(
+                        query_service.answer_query,
+                        payload.query_text,
+                        retrieval_query=retrieval_query,
+                        active_generation=generation,
+                        source_class_hint=ctx.effective_source_class_hint,
+                        record_type_hint=classification.record_type_hint,
+                        hint_is_user_provided=ctx.hint_is_user_provided,
+                        limit=payload.limit,
+                        secondary_hints=ctx.secondary_hints,
+                    )
+            except (httpx.HTTPError, RuntimeError) as exc2:
+                logger.error(
+                    "query.provider_failure",
+                    generation_id=generation.generation_id,
+                    exc_type=type(exc2).__name__,
+                )
+                raise HTTPException(
+                    status_code=503,
+                    detail="A provider dependency is temporarily unavailable. Please try again later.",
+                )
         t_post_answer = time.monotonic()
         logger.info(
             "query.latency_ms",

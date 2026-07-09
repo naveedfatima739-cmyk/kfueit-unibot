@@ -263,7 +263,7 @@ def _build_single_answer_model(
                 "openrouter_base_url",
                 "https://openrouter.ai/api/v1/chat/completions",
             ),
-            timeout=float(getattr(settings, "openrouter_timeout_seconds", 30.0)),
+            timeout=float(getattr(settings, "openrouter_timeout_seconds", 120.0)),
             app_name=getattr(settings, "openrouter_app_name", "UniBot"),
             client=client,
             async_client=async_client,
@@ -283,7 +283,7 @@ def _build_single_answer_model(
                 "cohere_chat_base_url",
                 "https://api.cohere.com/v2/chat",
             ),
-            timeout=float(getattr(settings, "cohere_timeout_seconds", 30.0)),
+            timeout=float(getattr(settings, "cohere_timeout_seconds", 120.0)),
             client=client,
             async_client=async_client,
         )

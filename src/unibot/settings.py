@@ -62,11 +62,11 @@ class Settings(BaseSettings):
     answer_model_fallback_backend: Literal["cohere", "openrouter"] | None = None
     cohere_chat_model: str = "command-a-03-2025"
     cohere_chat_base_url: str = "https://api.cohere.com/v2/chat"
-    cohere_timeout_seconds: float = Field(default=30.0, gt=0)
+    cohere_timeout_seconds: float = Field(default=120.0, gt=0)
     openrouter_api_key: str | None = None
     openrouter_model: str = "anthropic/claude-sonnet-4-20250514"
     openrouter_base_url: str = "https://openrouter.ai/api/v1/chat/completions"
-    openrouter_timeout_seconds: float = Field(default=60.0, gt=0)
+    openrouter_timeout_seconds: float = Field(default=120.0, gt=0)
     openrouter_app_name: str = "UniBot"
     grounding_verifier_backend: Literal["passthrough", "lettucedetect"] | None = None
     grounding_model: str = _DEFAULT_GROUNDING_MODEL
