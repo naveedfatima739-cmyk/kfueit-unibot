@@ -358,8 +358,9 @@ class AnsweringService:
         grounding_override: tuple[GroundingResult, float] | None = None,
     ) -> AnswerResult:
         t_cite_start = time.monotonic()
+        normalized_claims = _normalize_compound_citation_ids(draft.claims, ctx.citations)
         citations_valid, citation_warnings = validate_claim_citations(
-            draft.claims, ctx.citations
+            normalized_claims, ctx.citations
         )
         t_cite_end = time.monotonic()
         if not citations_valid:
@@ -379,14 +380,14 @@ class AnsweringService:
         if grounding_mode == "skip":
             t_ground_start = time.monotonic()
             grounding = PassthroughGroundingVerifier().verify(
-                draft.claims, ctx.citations
+                normalized_claims, ctx.citations
             )
             grounding_ms = round((time.monotonic() - t_ground_start) * 1000, 1)
         elif grounding_override is not None:
             grounding, grounding_ms = grounding_override
         else:
             t_ground_start = time.monotonic()
-            grounding = ground_fn(draft.claims, ctx.citations)
+            grounding = ground_fn(normalized_claims, ctx.citations)
             grounding_ms = round((time.monotonic() - t_ground_start) * 1000, 1)
         logger.info(
             "answering.grounding_mode",
@@ -417,12 +418,12 @@ class AnsweringService:
             generation_ms=generation_ms,
             citation_validation_ms=round((t_cite_end - t_cite_start) * 1000, 1),
             grounding_ms=grounding_ms,
-            claim_count=len(draft.claims),
+            claim_count=len(normalized_claims),
         )
 
         claims = tuple(
             MaterialClaim(text=claim.text, citation_ids=claim.citation_ids)
-            for claim in draft.claims
+            for claim in normalized_claims
         )
         return self._log_and_return(
             AnswerResult(
@@ -663,6 +664,28 @@ def _has_contradiction(evidence: tuple[RetrievedEvidence, ...]) -> bool:
         if len({item.value_hash for item in winning_items}) > 1:
             return True
     return False
+
+
+def _normalize_compound_citation_ids(
+    claims: tuple[GeneratedClaim, ...],
+    citations: tuple[Citation, ...],
+) -> tuple[GeneratedClaim, ...]:
+    known_ids = {c.citation_id for c in citations}
+    result: list[GeneratedClaim] = []
+    for claim in claims:
+        new_ids: list[str] = []
+        for raw_id in claim.citation_ids:
+            m = re.match(r"^\[([\d,\s]+)\]$", raw_id)
+            if m:
+                parts = [p.strip() for p in m.group(1).split(",")]
+                if len(parts) > 1:
+                    split_ids = [f"[{p}]" for p in parts]
+                    if all(sid in known_ids for sid in split_ids):
+                        new_ids.extend(split_ids)
+                        continue
+            new_ids.append(raw_id)
+        result.append(GeneratedClaim(text=claim.text, citation_ids=tuple(new_ids)))
+    return tuple(result)
 
 
 class DeterministicCitationAnswerModel:

@@ -98,7 +98,7 @@ def build_citation_answer_prompt(
             '{',
             '  "status": "answered|abstained",',
             '  "answer_text": "string",',
-            '  "claims": [{"text": "string", "citation_ids": ["[1]"]}],',
+            '  "claims": [{"text": "string", "citation_ids": ["[1]", "[5]"]}],',
             '  "warnings": ["string"]',
             '}',
         ]
