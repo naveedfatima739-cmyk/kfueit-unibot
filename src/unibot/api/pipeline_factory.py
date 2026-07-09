@@ -18,11 +18,21 @@ logger = structlog.get_logger(__name__)
 
 
 def _warm_embedding_provider(provider: Any) -> None:
-    embed_query = getattr(provider, "embed_query", None)
-    if callable(embed_query):
-        embed_query("")
-    else:
-        provider.embed("")
+    """Pre-load the SPLADE model in a background thread so startup is not blocked."""
+    import threading
+
+    def _warm() -> None:
+        try:
+            embed_query = getattr(provider, "embed_query", None)
+            if callable(embed_query):
+                embed_query("")
+            else:
+                provider.embed("")
+        except Exception:
+            logger.warning("embedding_provider.warmup_failed", exc_info=True)
+
+    t = threading.Thread(target=_warm, daemon=True)
+    t.start()
 
 
 @dataclass

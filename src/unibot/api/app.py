@@ -139,7 +139,13 @@ def create_app(
         grounding_model = getattr(
             resolved_settings, "grounding_model", _DEFAULT_MODEL_PATH,
         )
-        warm_detector(grounding_model)
+        try:
+            warm_detector(grounding_model)
+        except Exception:
+            logger.warning(
+                "grounding_detector.warmup_failed",
+                exc_info=True,
+            )
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
