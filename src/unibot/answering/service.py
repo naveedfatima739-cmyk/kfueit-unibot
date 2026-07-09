@@ -448,15 +448,19 @@ class AnsweringService:
         ctx = pre
 
         t_gen_start = time.monotonic()
-        draft = self._answer_model.generate(
-            CitationAnswerRequest(
-                query_text=query_text,
-                evidence=ctx.evidence_items,
-                citations=ctx.citations,
-                prompt=ctx.prompt,
-            )
+        answer_request = CitationAnswerRequest(
+            query_text=query_text,
+            evidence=ctx.evidence_items,
+            citations=ctx.citations,
+            prompt=ctx.prompt,
         )
+        draft = self._answer_model.generate(answer_request)
         t_gen_end = time.monotonic()
+
+        citations_valid, _ = validate_claim_citations(draft.claims, ctx.citations)
+        if not citations_valid:
+            draft = self._answer_model.generate(answer_request)
+            t_gen_end = time.monotonic()
 
         return self._finalize_post_generation(
             draft,
@@ -490,6 +494,15 @@ class AnsweringService:
         else:
             draft = await asyncio.to_thread(self._answer_model.generate, answer_request)
         t_gen_end = time.monotonic()
+
+        citations_valid, _ = validate_claim_citations(draft.claims, ctx.citations)
+        if not citations_valid:
+            t_gen_start = time.monotonic()
+            if async_gen is not None:
+                draft = await async_gen(answer_request)
+            else:
+                draft = await asyncio.to_thread(self._answer_model.generate, answer_request)
+            t_gen_end = time.monotonic()
 
         if ctx.grounding_mode == "skip":
             ground_fn = self._grounding_verifier.verify
@@ -654,12 +667,14 @@ def _has_contradiction(evidence: tuple[RetrievedEvidence, ...]) -> bool:
 
 class DeterministicCitationAnswerModel:
     def generate(self, request: CitationAnswerRequest) -> CitationAnswerDraft:
+        known_citation_ids = {c.citation_id for c in request.citations}
         claims = tuple(
             GeneratedClaim(
                 text=item.content,
                 citation_ids=(f"[{index}]",),
             )
             for index, item in enumerate(request.evidence, start=1)
+            if f"[{index}]" in known_citation_ids
         )
         answer_lines = [f"{claim.text} {claim.citation_ids[0]}" for claim in claims]
         return CitationAnswerDraft(

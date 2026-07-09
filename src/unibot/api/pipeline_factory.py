@@ -17,6 +17,14 @@ from unibot.settings import Settings
 logger = structlog.get_logger(__name__)
 
 
+def _warm_embedding_provider(provider: Any) -> None:
+    embed_query = getattr(provider, "embed_query", None)
+    if callable(embed_query):
+        embed_query("")
+    else:
+        provider.embed("")
+
+
 @dataclass
 class QueryRuntimeDeps:
     embedding_provider: Any
@@ -54,6 +62,7 @@ def build_query_runtime(settings: Settings) -> QueryRuntimeDeps:
         settings=settings,
         client=shared_clients.cohere,
     )
+    _warm_embedding_provider(embedding_provider)
     reranker = create_reranker(
         settings=settings,
         client=shared_clients.cohere,

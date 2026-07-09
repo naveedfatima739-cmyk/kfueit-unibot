@@ -246,9 +246,31 @@ function addMessage(text, cls) {
   welcomeEl.style.display = "none";
   const div = document.createElement("div");
   div.className = "message " + cls;
-  div.textContent = text;
+  if (cls === "bot") {
+    div.innerHTML = text;
+  } else {
+    div.textContent = text;
+  }
   messagesEl.appendChild(div);
   messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function formatAnswer(text, citations) {
+  let html = text.replace(/\[\d+(?:[,\s]*\d+)*\]/g, "").replace(/\s+/g, " ").trim();
+  const seen = new Set();
+  const unique = citations ? citations.filter(c => {
+    const key = c.source_url || c.citation_id;
+    if (seen.has(key)) return false;
+    seen.add(key); return true;
+  }) : [];
+  if (unique.length > 0) {
+    html += '<br><br><strong style="font-size:13px;">Sources:</strong><br>';
+    unique.forEach((c, i) => {
+      var url = c.source_url || "#";
+      html += '<a href="' + url + '" target="_blank" rel="noopener" style="font-size:13px;">[' + (i+1) + '] ' + url + '</a><br>';
+    });
+  }
+  return html;
 }
 
 function showSpinner() {
@@ -283,7 +305,7 @@ async function send() {
     const data = await res.json();
     hideSpinner();
     if (data.status === "answered") {
-      addMessage(data.answer_text, "bot");
+      addMessage(formatAnswer(data.answer_text, data.citations), "bot");
     } else if (data.status === "abstained") {
       addMessage("I couldn't verify that answer. Please try rephrasing your question.", "bot");
     } else {
