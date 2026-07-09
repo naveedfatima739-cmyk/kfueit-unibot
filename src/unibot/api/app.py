@@ -262,7 +262,7 @@ function addMessage(text, cls) {
 }
 
 function formatAnswer(text, citations) {
-  let html = text.replace(/\[\d+(?:[,\s]*\d+)*\]/g, "").replace(/\s+/g, " ").trim();
+  let html = text.replace(/\\[\\d+(?:[,\\s]*\\d+)*\\]/g, "").replace(/\\s+/g, " ").trim();
   const seen = new Set();
   const unique = citations ? citations.filter(c => {
     const key = c.source_url || c.citation_id;
