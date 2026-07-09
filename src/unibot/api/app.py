@@ -262,16 +262,22 @@ function addMessage(text, cls) {
 }
 
 function formatAnswer(text, citations) {
-  let html = text.replace(/\\[\\d+(?:[,\\s]*\\d+)*\\]/g, "").replace(/\\s+/g, " ").trim();
+  var html = text.replace(/\\[\\d,.\\s]+\\]/g, "").trim();
+  html = html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  html = html.replace(/^#{1,3}\\s+(.+)$/gm, "<strong>$1</strong>");
+  html = html.replace(/\\*\\*(.+?)\\*\\*/g, "<strong>$1</strong>");
+  html = html.replace(/^[\\s]*[-*]\\s+(.+)$/gm, "&#8226; $1");
+  html = html.replace(/\\*(.+?)\\*/g, "<em>$1</em>");
+  html = html.replace(/\\n/g, "<br>");
   const seen = new Set();
-  const unique = citations ? citations.filter(c => {
+  const unique = citations ? citations.filter(function(c) {
     const key = c.source_url || c.citation_id;
     if (seen.has(key)) return false;
     seen.add(key); return true;
   }) : [];
   if (unique.length > 0) {
     html += '<br><br><strong style="font-size:13px;">Sources:</strong><br>';
-    unique.forEach((c, i) => {
+    unique.forEach(function(c, i) {
       var url = c.source_url || "#";
       html += '<a href="' + url + '" target="_blank" rel="noopener" style="font-size:13px;">[' + (i+1) + '] ' + url + '</a><br>';
     });
