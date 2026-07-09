@@ -25,9 +25,9 @@ def _warm_embedding_provider(provider: Any) -> None:
         try:
             embed_query = getattr(provider, "embed_query", None)
             if callable(embed_query):
-                embed_query("")
+                embed_query("test")
             else:
-                provider.embed("")
+                provider.embed("test")
         except Exception:
             logger.warning("embedding_provider.warmup_failed", exc_info=True)
 
