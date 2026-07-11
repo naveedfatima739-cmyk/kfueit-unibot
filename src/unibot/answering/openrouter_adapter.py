@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Literal
 import httpx
 
 from unibot.answering._openrouter_utils import extract_content as _extract_content
+from unibot.answering.model_adapter import RateLimitError
 
 if TYPE_CHECKING:
     from unibot.answering.model_adapter import CitationAnswerDraft, CitationAnswerRequest
@@ -125,6 +126,8 @@ class OpenRouterCitationAnswerModel:
     def generate(self, request: "CitationAnswerRequest") -> "CitationAnswerDraft":
         post = self._client.post if self._client is not None else httpx.post
         response = post(self._base_url, **self._build_request_kwargs(request))
+        if response.status_code == 429:
+            raise RateLimitError("OpenRouter API rate limit exceeded. Try again later.")
         response.raise_for_status()
         return self._parse_response(response.json())
 
@@ -138,6 +141,8 @@ class OpenRouterCitationAnswerModel:
                 response = await client.post(
                     self._base_url, **self._build_request_kwargs(request)
                 )
+        if response.status_code == 429:
+            raise RateLimitError("OpenRouter API rate limit exceeded. Try again later.")
         response.raise_for_status()
         return self._parse_response(response.json())
 

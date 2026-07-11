@@ -324,9 +324,9 @@ async function send() {
     if (data.status === "answered") {
       addMessage(formatAnswer(data.answer_text, data.citations), "bot");
     } else if (data.status === "abstained") {
-      addMessage("I couldn't verify that answer. Please try rephrasing your question.", "bot");
+      addMessage(data.answer_text || "I couldn't verify that answer. Please try rephrasing your question.", "bot");
     } else {
-      addMessage("I couldn't find an answer. Please try a different question.", "bot");
+      addMessage(data.answer_text || "I couldn't find an answer. Please try a different question.", "bot");
     }
   } catch (e) {
     hideSpinner();

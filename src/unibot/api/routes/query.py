@@ -9,6 +9,8 @@ from typing import Any, cast
 
 import httpx
 import structlog
+
+from unibot.answering.model_adapter import RateLimitError
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from starlette.responses import StreamingResponse
@@ -74,12 +76,10 @@ def _serialize_answer(
     }
 
 
-def _out_of_scope_result(reason: str) -> AnswerResult:
+def _out_of_scope_result(reason: str, answer_text: str | None = None) -> AnswerResult:
     return AnswerResult(
         status="abstained",
-        answer_text=(
-            "I cannot answer that from the knowledge base because the request is out of scope."
-        ),
+        answer_text=answer_text or reason or "I cannot answer that from the knowledge base because the request is out of scope.",
         claims=(),
         citations=(),
         warnings=(reason,),
@@ -410,6 +410,15 @@ async def query_records(payload: QueryRequest, request: Request) -> dict[str, An
                     limit=payload.limit,
                     secondary_hints=ctx.secondary_hints,
                 )
+        except RateLimitError as exc:
+            logger.warning(
+                "query.rate_limited",
+                generation_id=generation.generation_id,
+            )
+            return _serialize_answer(
+                _out_of_scope_result(str(exc), answer_text=str(exc)),
+                generation=generation,
+            )
         except (httpx.HTTPError, RuntimeError) as exc:
             logger.warning(
                 "query.provider_failure_retrying",
@@ -440,6 +449,15 @@ async def query_records(payload: QueryRequest, request: Request) -> dict[str, An
                         limit=payload.limit,
                         secondary_hints=ctx.secondary_hints,
                     )
+            except RateLimitError as exc2:
+                logger.warning(
+                    "query.rate_limited_after_retry",
+                    generation_id=generation.generation_id,
+                )
+                return _serialize_answer(
+                    _out_of_scope_result(str(exc2), answer_text=str(exc2)),
+                    generation=generation,
+                )
             except (httpx.HTTPError, RuntimeError) as exc2:
                 logger.error(
                     "query.provider_failure",

@@ -9,6 +9,10 @@ import httpx
 
 from unibot.settings import resolve_answer_model_backend
 
+
+class RateLimitError(RuntimeError):
+    """Raised when the provider returns 429 Too Many Requests."""
+
 if TYPE_CHECKING:
     from unibot.answering.service import Citation
     from unibot.retrieval.service import RetrievedEvidence
@@ -184,6 +188,8 @@ class CohereCitationAnswerModel:
     def generate(self, request: CitationAnswerRequest) -> CitationAnswerDraft:
         post = self._client.post if self._client is not None else httpx.post
         response = post(self._base_url, **self._build_request_kwargs(request))
+        if response.status_code == 429:
+            raise RateLimitError("Cohere API rate limit exceeded. Try again later.")
         response.raise_for_status()
         return self._parse_response(response.json())
 
@@ -199,6 +205,8 @@ class CohereCitationAnswerModel:
                 response = await client.post(
                     self._base_url, **self._build_request_kwargs(request)
                 )
+        if response.status_code == 429:
+            raise RateLimitError("Cohere API rate limit exceeded. Try again later.")
         response.raise_for_status()
         return self._parse_response(response.json())
 
